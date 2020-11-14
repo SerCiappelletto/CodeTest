@@ -1,6 +1,6 @@
 
 const fs = require('fs');
-const readline = require('readline');
+// const readline = require('readline');
 
 class Stocks {
         constructor()
@@ -9,87 +9,101 @@ class Stocks {
                 this.stocks = JSON.parse(raw);
         }
         printStocks(){
-                return this.stocks;
+                return new Promise((resolve, reject) => {
+                        resolve(this.stocks);
+                });
         }
         setStock(target, name, price){
-                for(let stock of this.stocks){
-                        if(stock.name == target){
-                                stock.name = name;
-                                stock.price = price;
-                                let data = JSON.stringify(this.stocks);
-                                fs.writeFileSync('./data/input.json', data);
-                                return JSON.stringify("Stock updated.");
+                return new Promise((resolve, reject) => {
+                        for(let stock of this.stocks){
+                                if(stock.name == target){
+                                        stock.name = name;
+                                        stock.price = price;
+                                        let data = JSON.stringify(this.stocks);
+                                        fs.writeFileSync('./data/input.json', data);
+                                        resolve(JSON.stringify("Stock updated."))
+                                }
                         }
-                }
-                return JSON.stringify("Stock failed to update.");
+                        resolve(JSON.stringify("Stock failed to update."))
+                });
         }
         addStock(name, price)
         {
-                this.stocks.push({ name: name, price: price });
-                let data = JSON.stringify(this.stocks);
-                fs.writeFileSync('./data/input.json', data);
+                return new Promise((resolve, reject) => {
+                        if(name != undefined && price != undefined && name != null && price != NaN){
+                                this.stocks.push({ name: name, price: price });
+                                let data = JSON.stringify(this.stocks);
+                                fs.writeFileSync('./data/input.json', data);
+                                resolve(JSON.stringify("Stock successfully added."));
+                        }else{
+                                resolve(JSON.stringify("Sorry, we couldn't add the stock."))
+                        }
+                })
         }
         getStock(stockName)
         {
-                for(let stock of this.stocks){
-                        if(stock.name == stockName){
-                                return JSON.stringify(stock);
+                return new Promise((resolve, reject) => {
+                        for(let stock of this.stocks){
+                                if(stock.name == stockName){
+                                        resolve(JSON.stringify(stock));
+                                }
                         }
-                }
+                        resolve(JSON.stringify("Sorry, we couldn't find the stock you searched for."));
+                })
         }
-        async humanReadablePrint(stock)
+        humanReadablePrint(stock)
         {
-                await new Promise((resolve, reject) => {
+                return new Promise((resolve, reject) => {
                         if(stock !== undefined){
-                                resolve( JSON.stringify("The stock you searched (" + stock.name + ") is currently trading at the price of : " + stock.price + " USD."))
+                                resolve( JSON.stringify("The stock you searched (" + stock.name + ") is currently trading at the price of : " + stock.price + " USD."));
                         }else{
-                                resolve( JSON.stringify("Sorry, we couldn't find the stock you were searching for."))
+                                resolve( JSON.stringify("Sorry, we couldn't find the stock you were searching for."));
                         }
                 })
         }
         async humanReadableSearch(stockName)
         {
-                let stock = this.getStock(stockName);
-                if(stock !== null){
-                        return await this.humanReadablePrint(stock);
-                }else{
-                        return JSON.stringify("There are no records of the searched stock.");
-                }
-        }
-        filterStocks(target, mode)
-        {
-                let temp = this.stocks;
-
-                temp.sort( function(a, b, mode) {
-                        if(mode == 1 || mode == true){
-                                return a.price - b.price;
+                return new Promise(async (resolve, reject) => {
+                        let stock = await this.getStock(stockName);
+                        stock = JSON.parse(stock);
+                        if(stock !== null){
+                                let data = await this.humanReadablePrint(stock);
+                                resolve(data);
                         }else{
-                                return b.price - a.price;
+                                resolve(JSON.stringify("There are no records of the searched stock."));
                         }
-                } )
+                });
+        }
+        filterStocks(params)
+        {
+                return new Promise((resolve, reject) => {
+                        let target = params.target;
+                        let mode = params.mode;
+                        let temp = this.stocks;
+                        let returnObject = []
 
-                returnObject.push("\nThe list ordered after the given conditions is : \n");
-
-                let flag = 0;
-                let returnObject = [];
-                for(let stock of temp){
-                        if(mode == 1){
-                                if(stock.price >= target){
-                                        flag = 1;
-                                        returnObject.push("   Name of the stock : " + stock.name + ". " + " Trading at : " + stock.price + " USD.");
+                        temp.sort( function(a, b, mode) {
+                                if(mode == 1 || mode == true){
+                                        return a.price - b.price;
+                                }else{
+                                        return b.price - a.price;
                                 }
-                        }else {
-                                if(stock.price <= target){
-                                        flag = 1;
-                                        returnObject.push("   Name of the stock : " + stock.name + ". " + " Trading at : " + stock.price + " USD.");
+                        })
+
+                        for(let stock of temp){
+                                if(mode == 1){
+                                        if(stock.price >= target){
+                                                returnObject.push({name: stock.name, price: stock.price});
+                                        }
+                                }else {
+                                        if(stock.price <= target){
+                                                returnObject.push({name: stock.name, price: stock.price});
+                                        }
                                 }
                         }
-                }
-                if(flag == 0){
-                        returnObject.push("   Empty, we couldn't find any stocks that matched the conditions.");
-                }
 
-                return JSON.stringify(returnObject);
+                        resolve(returnObject);
+                });
         }
 }
 
